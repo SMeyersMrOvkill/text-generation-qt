@@ -13,6 +13,7 @@ A QT UI for Text Generation with a variety of API's and toolkits. Targeting the 
 Download the release, ensure Python 3 is installed, any recent version should do but it's been tested on 3.10 and 3.11 .  Then, open up a terminal, navigate to your repository. Once there execute
 
 ```bash
+python3 -m pip install -r requirements.txt
 python3 app.py
 ```
 
