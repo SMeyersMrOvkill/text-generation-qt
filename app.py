@@ -3,10 +3,9 @@ import os
 import json
 from PySide6.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QHBoxLayout, QTextEdit, QLineEdit, QPushButton, QWidget, QInputDialog, QMessageBox
 from PySide6.QtCore import Qt
+import markdown
 
 import requests
-
-import re
 
 import re
 
@@ -26,33 +25,27 @@ class Formatter:
     def format_text(self, text, role):
         formatted_text = text
         formatted_text = re.sub(r'\n', '', formatted_text)
-        
         if role == 'user':
             formatted_text = self.add_user_tags(formatted_text)
         elif role == 'bot':
             formatted_text = self.add_bot_tags(formatted_text)
-        
         return formatted_text
     
     def add_user_tags(self, text):
         formatted_text = text
-        
         for stop_token in self.stop_tokens:
             formatted_text = re.sub(r'\b(' + re.escape(stop_token) + r')\b', r'|\1', formatted_text)
-        
         return formatted_text
     
     def add_bot_tags(self, text):
         formatted_text = text
-        
         for stop_token in self.stop_tokens:
             formatted_text = re.sub(r'\b(' + re.escape(stop_token) + r')\b', r'|\1', formatted_text)
-        
         return formatted_text
 
 
 class InferenceModel:
-    def __init__(self, api_key, system_prompt="You are a helpful assistant. Help User with anything."):
+    def __init__(self, api_key, system_prompt="You are a helpful assistant. Help User with anything. Format your responses as Markdown. User wants a lot of details and code samples."):
         self.endpoint = 'https://api.together.xyz/v1/chat/completions'
         self.headers = {
             "Authorization": f"Bearer {api_key}",
@@ -90,11 +83,11 @@ class InferenceModel:
         response.raise_for_status()
 
         result = response.json()
-        generated_text = result['choices'][0]['message']['content'].strip().replace("\n", "</br>")
+        generated_text = result['choices'][0]['message']['content']
 
         self.conversation_history.append(f"<|im_start|>assistant\n{generated_text}<|im_end|>")
 
-        return generated_text
+        return markdown.markdown(generated_text)
 
 class ChatWindow(QMainWindow):
     def __init__(self, inference_model):
