@@ -4,7 +4,7 @@ import json
 from PySide6.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QHBoxLayout, QTextEdit, QLineEdit, QPushButton, QWidget, QInputDialog, QMessageBox
 from PySide6.QtCore import Qt
 import markdown
-
+import pathlib
 import requests
 
 import re
@@ -45,6 +45,8 @@ class Formatter:
 
 
 class InferenceModel:
+    system_prompt: str
+
     def __init__(self, api_key, system_prompt="You are a helpful assistant. Help User with anything. Format your responses as Markdown. User wants a lot of details and code samples."):
         self.endpoint = 'https://api.together.xyz/v1/chat/completions'
         self.headers = {
@@ -62,7 +64,7 @@ class InferenceModel:
                 "<|im_start|>"
             ]
         }
-        self.system_prompt = system_prompt
+        self.system_prompt = get_system_prompt()
         self.reset_conversation()
 
     def reset_conversation(self, system_prompt=None):
@@ -129,15 +131,12 @@ class ChatWindow(QMainWindow):
         if ok and prompt:
             self.system_prompt = prompt
             self.reset_conversation(self.system_prompt)
-            self.chat_history.append(f"<strong>SYSTEM</strong> &nbsp;&nbsp; Prompt Changed: {self.system_prompt}")
-            pth = os.path.join(os.path.expanduser("~"), ".tgqt", "system_prompt.txt")
+            self.chat_history.append(f"<strong>SYSTEM</strong>: &nbsp;&nbsp; Prompt Changed: {self.system_prompt}")
+            pth = pathlib.Path(os.path.join(os.path.expanduser("~"), ".tgqt", "system_prompt.txt"))
             if not os.path.exists(pth):
-                os.makedirs(pth, exist_ok=True)
-                os.rmdir(pth)
-            f = open(pth, "w")
-            f.write(self.system_prompt)
-            f.flush()
-            f.close()
+                pth.mkdir(exist_ok=True)
+                pth.rmdir()
+            pth.write_text(self.system_prompt)
     
     def send_message(self):
         user_input, ok = QInputDialog.getMultiLineText(self, "User Input", "Enter your message:")
@@ -157,7 +156,7 @@ class ChatWindow(QMainWindow):
 
 def get_api_key():
     home_dir = os.path.expanduser("~")
-    config_file = os.path.join(home_dir, ".snail_gui.json")
+    config_file = os.path.join(home_dir, ".tgqt", "gui.json")
 
     if os.path.exists(config_file):
         with open(config_file, "r") as f:
@@ -183,6 +182,13 @@ def get_api_key():
         except Exception as e:
             QMessageBox.warning(None, "Error", f"An error occurred: {str(e)}")
 
+def get_system_prompt():
+    pth = pathlib.Path(os.path.join(os.path.expanduser("~"), ".tgqt", "system_prompt.txt"))
+    if not os.path.exists(pth):
+        os.makedirs(pth)
+        os.rmdir(pth)
+        pth.write_text("You are a helpful assistant.")
+    return pth.read_text()
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
