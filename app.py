@@ -113,11 +113,32 @@ class ChatWindow(QMainWindow):
         reset_button = QPushButton("Reset", self)
         reset_button.clicked.connect(self.reset_conversation)
         layout.addWidget(reset_button, alignment=Qt.AlignCenter)
+        
+        system_prompt_button = QPushButton("System Prompt", self)
+        system_prompt_button.setToolTip("Displays the system prompt")
+        system_prompt_button.clicked.connect(self.show_system_prompt)
+        layout.addWidget(system_prompt_button, alignment=Qt.AlignCenter)
 
         layout.setStretch(0, 6)  # Set the stretch factor for chat_history to 6
-        layout.setStretch(1, 1)  # Set the stretch factor for send_button to 1
-        layout.setStretch(2, 1)  # Set the stretch factor for reset_button to 1
+        layout.setStretch(1, 2) # Send Button: 2
+        layout.setStretch(2, 1) # Reset: 1
+        layout.setStretch(3, 2) # System Prompt: 2
 
+    def show_system_prompt(self):
+        prompt, ok = QInputDialog.getMultiLineText(self, "System Prompt", "Enter a system prompt, e.g. You are a helpful assistant.")
+        if ok and prompt:
+            self.system_prompt = prompt
+            self.reset_conversation(self.system_prompt)
+            self.chat_history.append(f"<strong>SYSTEM</strong> &nbsp;&nbsp; Prompt Changed: {self.system_prompt}")
+            pth = os.path.join(os.path.expanduser("~"), ".tgqt", "system_prompt.txt")
+            if not os.path.exists(pth):
+                os.makedirs(pth, exist_ok=True)
+                os.rmdir(pth)
+            f = open(pth, "w")
+            f.write(self.system_prompt)
+            f.flush()
+            f.close()
+    
     def send_message(self):
         user_input, ok = QInputDialog.getMultiLineText(self, "User Input", "Enter your message:")
         if ok and user_input:
@@ -126,8 +147,11 @@ class ChatWindow(QMainWindow):
             generated_text = self.inference_model(user_input)
             self.chat_history.append(f"<strong>Assistant:</strong> {generated_text}<br/>")
 
-    def reset_conversation(self):
-        self.inference_model.reset_conversation()
+    def reset_conversation(self, system_prompt=None):
+        if system_prompt:
+            self.inference_model.reset_conversation(system_prompt)
+        else:
+            self.inference_model.reset_conversation()
         self.chat_history.clear()
         self.chat_history.append("<em>Conversation reset.</em>") 
 
